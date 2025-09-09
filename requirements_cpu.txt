@@ -1,0 +1,27 @@
+# Core deep learning framework
+# torch>=2.1.0
+# torchvision>=0.16.0
+# torchaudio>=2.1.0
+
+# PyTorch Geometric and dependencies (CPU versions)
+# torch-scatter>=2.1.1+cpu
+# torch-sparse>=0.6.18+cpu
+# torch-cluster>=1.6.1+cpu
+# torch-spline-conv>=1.2.2+cpu
+# torch-geometric>=2.5.0
+
+# Utility libraries
+numpy>=1.22
+scipy>=1.8
+pandas>=1.3
+scikit-learn>=1.0
+networkx>=2.6
+matplotlib>=3.4
+tqdm>=4.64
+
+# Jupyter and notebook tools
+jupyter
+notebook
+
+# NLP models (if needed)
+transformers>=4.30

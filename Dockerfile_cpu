@@ -1,0 +1,26 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    graphviz \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY requirements_cpu.txt .
+
+RUN pip install --upgrade pip && \
+    pip install \
+        torch==2.4.1+cpu \
+        torchvision==0.19.1+cpu \
+        torchaudio==2.4.1+cpu \
+        --index-url https://download.pytorch.org/whl/cpu && \
+    pip install \
+        torch-scatter torch-sparse torch-cluster torch-spline-conv torch-geometric \
+        -f https://data.pyg.org/whl/torch-2.4.1+cpu.html
+    
+RUN  pip install -r requirements_cpu.txt
+
+COPY . .
+
+CMD ["python", "main.py"]
