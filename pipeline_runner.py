@@ -13,6 +13,9 @@ import torch.optim as optim
 import gcsfs
 
 from google.cloud import storage
+import os
+print("GOOGLE_APPLICATION_CREDENTIALS:", os.environ.get("GOOGLE_APPLICATION_CREDENTIALS"))
+
 
 # ------------------- 保存/读取支持 GCS -------------------
 def save_obj(obj, path):
@@ -28,14 +31,29 @@ def save_obj(obj, path):
         torch.save(obj, path)
 
 def load_obj(path):
-    if path.startswith("gs://"):
-        client = storage.Client()
-        bucket_name, blob_name = path[5:].split("/", 1)
-        tmp_path = "/tmp/tmp_load.pth"
-        client.bucket(bucket_name).blob(blob_name).download_to_filename(tmp_path)
-        return torch.load(tmp_path)
-    else:
-        return torch.load(path)
+    try:
+        if path.startswith("gs://"):
+            client = storage.Client()
+            bucket_name, blob_name = path[5:].split("/", 1)
+            tmp_path = "/tmp/tmp_load.pth"
+            print(f"[load_obj] Downloading gs://{bucket_name}/{blob_name} -> {tmp_path}")
+            blob = client.bucket(bucket_name).blob(blob_name)
+            if not blob.exists():
+                raise FileNotFoundError(f"Blob gs://{bucket_name}/{blob_name} does not exist")
+            blob.download_to_filename(tmp_path)
+            print(f"[load_obj] Download complete, loading with torch.load()")
+            obj = torch.load(tmp_path)
+            print(f"[load_obj] Load successful")
+            return obj
+        else:
+            print(f"[load_obj] Loading local file {path}")
+            obj = torch.load(path)
+            print(f"[load_obj] Load successful")
+            return obj
+    except Exception as e:
+        print(f"[load_obj] Failed to load object from {path}: {e}")
+        raise
+
 
 # ------------------- 主流程 -------------------
 def main(step, workdir):
