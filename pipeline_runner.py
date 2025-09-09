@@ -44,8 +44,13 @@ def main(step, workdir):
     if step == "step1":
         data = step_1(workdir)  # workdir 是 gs:// 路径
         save_obj(data, f"{workdir}/data.pth")
+        print("workdir:", workdir)
+        print("data:", data)
+
 
     elif step == "step2":
+        print(f"{workdir}/data.pth")
+
         data = load_obj(f"{workdir}/data.pth")
         raw_embeddings, wl_embedding, hop_embeddings, int_embeddings, data = step_2(workdir, data, top_k=7)
         save_obj((raw_embeddings, wl_embedding, hop_embeddings, int_embeddings, data), f"{workdir}/embeddings.pth")
