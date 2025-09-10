@@ -61,43 +61,41 @@ def set_args(data):
     
     parser = argparse.ArgumentParser(description="Graph Model Training Settings")
     
-    
     # Network setting
-    parser.add_argument('--initializer_range', type=float, default=0.02, help='initializer_range')
-    parser.add_argument('--num_hidden_layers', type=int, default=2, help='Number Of HiddenLayers')
-    parser.add_argument('--hidden_size', type=int, default=32, help='hidden size')
-    parser.add_argument('--num_attention_heads', type=int, default=4, help='Number of attention_heads')
-    parser.add_argument('--intermediate_size', type=int, default=128, help='intermediate_size')
-    parser.add_argument('--hidden_dropout_prob', type=float, default=0.2, help='drop out at hidden layer')
-    parser.add_argument('--attention_probs_dropout_prob', type=float, default=0.2, help='drop out at attentional layer')
-    parser.add_argument('--hidden_act', type=str, default='gelu', help='gelu activation function')
-    parser.add_argument('--layer_norm_eps', type=float, default=1e-12, help='layer_norm_eps')
+    parser.add_argument('--initializer_range', type=float, default=0.02)
+    parser.add_argument('--num_hidden_layers', type=int, default=2)
+    parser.add_argument('--hidden_size', type=int, default=32)
+    parser.add_argument('--num_attention_heads', type=int, default=4)
+    parser.add_argument('--intermediate_size', type=int, default=128)
+    parser.add_argument('--hidden_dropout_prob', type=float, default=0.2)
+    parser.add_argument('--attention_probs_dropout_prob', type=float, default=0.2)
+    parser.add_argument('--hidden_act', type=str, default='gelu')
+    parser.add_argument('--layer_norm_eps', type=float, default=1e-12)
+    parser.add_argument('--residual_type', type=str, default='graph_raw')
     
-    parser.add_argument('--residual_type', type=str, default='graph_raw', help='graph_raw or raw or None')
+    # Bert Config
+    parser.add_argument('--max_wl_role_index', type=int, default=100)
+    parser.add_argument('--max_hop_dis_index', type=int, default=100)
+    parser.add_argument('--max_inti_pos_index', type=int, default=100)
+    parser.add_argument('--top_k', type=int, default=7)
+    parser.add_argument('--k', type=int, default=len(data.y.unique()))
     
-    #Bert Config
-    parser.add_argument('--max_wl_role_index', type=int, default=100, help='max_wl_role_index')
-    parser.add_argument('--max_hop_dis_index', type=int, default=100, help='max_hop_dis_index')
-    parser.add_argument('--max_inti_pos_index', type=int, default=100, help='max_inti_pos_index')
-    parser.add_argument('--top_k', type=int, default=7, help='top_k neighbors')
-    parser.add_argument('--k', type=int, default=len(data.y.unique()), help='embedding dimension')
+    # Data Config
+    parser.add_argument('--nclass', type=int, default=len(data.y.unique()))
+    parser.add_argument('--nfeature', type=int, default=data.x.shape[1])
+    parser.add_argument('--ngraph', type=int, default=data.x.shape[0])
+    parser.add_argument('--batch_size', type=int, default=64)
     
-    #Data Config
-    parser.add_argument('--nclass', type=int, default=len(data.y.unique()), help='nclass')
-    parser.add_argument('--nfeature', type=int, default=data.x.shape[1], help='nfeature')
-    parser.add_argument('--ngraph', type=int, default=data.x.shape[0], help='ngraph or nodes')
-    parser.add_argument('--batch_size', type=int, default=64, help='batch size for the data split')
+    # Training Config
+    parser.add_argument('--patience', type=int, default=30)
+    parser.add_argument('--mode', type=str, default='min')
+    parser.add_argument('--base_lr', type=float, default=1e-3)   # 改成 float
+    parser.add_argument('--weight_decay', type=float, default=1e-4)
+    parser.add_argument('--factor', type=float, default=0.5)
+    parser.add_argument('--decay_factor', type=float, default=0.9)
     
-    
-    # Early stop, optimizer etc. Config
-    parser.add_argument('--patience', type=int, default=30, help='early stop patience')
-    parser.add_argument('--mode', type=str, default='min', help='during the training the loss should be minimum')
-    parser.add_argument('--base_lr', type=int, default=1e-3, help='base learning rate')
-    parser.add_argument('--weight_decay', type=float, default=1e-4, help='weight_decay')
-    parser.add_argument('--factor', type=float, default=0.5, help='weight_decay')
-    parser.add_argument('--decay_factor', type=float, default=0.9, help='decay_factor for lr modulation')
-    
-    args = parser.parse_args()
+    # 不从 sys.argv 解析，而是直接取默认值
+    args = parser.parse_args([])
     return args
 
 
