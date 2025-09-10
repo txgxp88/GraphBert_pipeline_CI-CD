@@ -18,6 +18,8 @@ import os
 import argparse
 
 def set_args(data):
+    import argparse
+    
     parser = argparse.ArgumentParser(description="Graph Model Training Settings")
     
     
