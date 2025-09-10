@@ -136,7 +136,7 @@ def step_3(data, args):
                                 input_feature = data.x 
                                 )
 
-    return bert_config, config
+    return bert_config
 
 
 
