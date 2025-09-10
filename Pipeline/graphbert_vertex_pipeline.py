@@ -4,11 +4,6 @@ from google_cloud_pipeline_components.v1.custom_job import CustomTrainingJobOp
 import yaml
 import kfp
 
-# PROJECT_ID = "my-gitrunning-55025"
-# REGION = "us-central1"
-# BUCKET = "gs://my-graphbert-bucket/graphbert"
-# IMAGE_URI = "us-central1-docker.pkg.dev/my-gitrunning-55025/my-docker-repo/myapp:latest"  # 你打包的docker镜像
-
 with open("pipeline_config.yml", "r") as f:
     cfg = yaml.safe_load(f)
 

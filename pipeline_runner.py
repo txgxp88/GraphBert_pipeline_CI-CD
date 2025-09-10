@@ -113,7 +113,7 @@ def set_args(data, yaml_path):
 
     # ---------------- early stopping ----------------
     parser.add_argument('--patience', type=int, default=early_stopping_cfg.get("patience", 30))
-    parser.add_argument('--es_mode', type=str, default=early_stopping_cfg.get("mode", "min"))
+    parser.add_argument('--mode', type=str, default=early_stopping_cfg.get("mode", "min"))
 
     # ---------------- data-driven params ----------------
     parser.add_argument('--k', type=int, default=len(data.y.unique()), help='number of classes (same as nclass)')

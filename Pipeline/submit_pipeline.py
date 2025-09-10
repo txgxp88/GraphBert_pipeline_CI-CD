@@ -16,5 +16,3 @@ job = aiplatform.PipelineJob(
 )
 
 job.run()
-
-
