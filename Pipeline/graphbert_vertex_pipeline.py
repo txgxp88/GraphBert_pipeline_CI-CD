@@ -1,12 +1,13 @@
-
 from kfp import dsl
 from kfp.dsl import Dataset, Model
-from google_cloud_pipeline_components.v1.custom_job import CustomTrainingJobRunOp
+from google_cloud_pipeline_components.v1.custom_job import CustomTrainingJobOp
 
-PROJECT_ID = "your-project-id"
+PROJECT_ID = "my-gitrunning-55025"
 REGION = "us-central1"
-BUCKET = "gs://your-bucket/graphbert"
+BUCKET = "gs://my-graphbert-bucket/graphbert"
 IMAGE_URI = "us-central1-docker.pkg.dev/my-gitrunning-55025/my-docker-repo/myapp:latest"  # 你打包的docker镜像
+SERVICE_ACCOUNT = "162077967707-compute@developer.gserviceaccount.com"
+
 
 # 🔹 Step1: 数据准备
 @dsl.component(base_image=IMAGE_URI)
@@ -45,9 +46,24 @@ def finetune_op(workdir: str):
     pipeline_root=BUCKET,
 )
 def graphbert_pipeline(workdir: str = BUCKET):
-    s1 = step1_op(workdir=workdir)
-    s2 = step2_op(workdir=workdir).after(s1)
-    s3 = step3_op(workdir=workdir).after(s2)
-    s4 = pretrain_op(workdir=workdir).after(s3)
-    s5 = finetune_op(workdir=workdir).after(s4)
+    s1 = step1_op(workdir=workdir).set_caching_options(False)
+    s2 = step2_op(workdir=workdir).after(s1).set_caching_options(False)
+    s3 = step3_op(workdir=workdir).after(s2).set_caching_options(False)
+    s4 = pretrain_op(workdir=workdir).after(s3).set_caching_options(False)
+    s5 = finetune_op(workdir=workdir).after(s4).set_caching_options(False)
 
+
+# ------------------------- 使用服务账号提交 Custom Job（可选） -------------------------
+# 如果你在 Vertex AI 上直接使用 CustomTrainingJobOp，也可以指定服务账号：
+# job = CustomTrainingJobOp(
+#     display_name="graphbert-step1",
+#     project=PROJECT_ID,
+#     location=REGION,
+#     worker_pool_specs=[{
+#         "machine_spec": {"machine_type": "n1-standard-4"},
+#         "replica_count": 1,
+#         "container_spec": {"image_uri": IMAGE_URI},
+#     }],
+#     service_account=SERVICE_ACCOUNT,
+#     args=["--step", "step1", "--workdir", BUCKET],
+# )
