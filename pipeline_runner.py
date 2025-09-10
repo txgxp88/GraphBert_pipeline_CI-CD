@@ -16,7 +16,8 @@ import argparse
 from google.cloud import storage
 import os
 print("GOOGLE_APPLICATION_CREDENTIALS:", os.environ.get("GOOGLE_APPLICATION_CREDENTIALS"))
-
+import time
+import numpy as np
 
 # ------------------- 保存/读取支持 GCS -------------------
 def save_obj(obj, path):
@@ -157,32 +158,98 @@ def main(step, workdir):
 
         max_epoch = 100
         classify_learning_record_dict = {}
+        max_score = 0.0
+        t_begin = time.time()
         for epoch in range(max_epoch):
+            t_epoch_begin = time.time()
+
             GraphBertNodeClassification.train()
+
             epoch_loss = 0.0
             epoch_correct = 0
             epoch_total = 0
+            
             for load in train_loader:
-                optimizer.zero_grad()
-                output = GraphBertNodeClassification(raw_embeddings, wl_embedding, int_embeddings, hop_embeddings, data, idx=load)
+
+                optimizer.zero_grad()            
+                
+                output  = GraphBertNodeClassification.forward(
+                    raw_embeddings, wl_embedding, int_embeddings, hop_embeddings, data, idx=load)
+                
+                # Two loss functions
                 loss_train = F.cross_entropy(output, data.y[load])
+                
                 loss_train.backward()
-                pred = output.max(1)[1]
+                
+                pred = (output).max(1)[1]
                 correct = pred.eq(data.y[load]).sum().item()
+
+                # epoch_loss += loss_train.item() * len(batch_idx)
+                epoch_loss += loss_train.item() * len(load)# based on the number of samples
+                
                 optimizer.step()
-                epoch_loss += loss_train.item() * len(load)
+                
+                
                 epoch_correct += correct
+                
+                # epoch_total += len(batch_idx)
                 epoch_total += len(load)
+                
+                
+                # print(f"Batch {i+1}/{num_batches}, Loss: {loss_train.item():.4f}, Accuracy: {correct/len(batch_idx):.4f}")
+                
 
-            print(f"[Finetune] epoch {epoch}, loss={epoch_loss/epoch_total:.4f}, acc={epoch_correct/epoch_total:.4f}")
+            loss_train_avg = epoch_loss / epoch_total
+            acc_train_avg = epoch_correct / epoch_total
 
-            scheduler.step(epoch_loss)
-            early_stopping(epoch_loss, GraphBertNodeClassification)
+            # evaluation
+            GraphBertNodeClassification.eval()#frozen
+            
+            # Validate (using mini-batch)
+            acc_val, loss_val, accuracy_val, precision_val, recall_val, f1_val, roc_auc_val, confusion_matrix_val = evaluate_in_batches(GraphBertNodeClassification, raw_embeddings, wl_embedding, int_embeddings, hop_embeddings, data, val_loader, batch_size=20)
+
+            # Test (using mini-batch)
+            acc_test, loss_test, accuracy_test, precision_test, recall_test, f1_test, roc_auc_test, confusion_matrix_test = evaluate_in_batches(GraphBertNodeClassification, raw_embeddings, wl_embedding, int_embeddings, hop_embeddings, data, test_loader, batch_size=20)
+
+            classify_learning_record_dict[epoch] = {
+                'loss_train': loss_train_avg,
+                'acc_train': acc_train_avg,
+                'loss_val': loss_val,
+                'acc_val': acc_val,
+                'loss_test': loss_test,
+                'acc_test': acc_test,
+                'time': time.time() - t_epoch_begin
+            }
+
+            print(f"Epoch: {epoch+1:04d}")
+            print(f"  [Train] loss: {loss_train_avg:.4f} | acc: {acc_train_avg:.4f}")
+            print(f"  [Valid] loss: {loss_val:.4f} | acc: {acc_val:.4f}")
+            print(f"  [Test ] loss: {loss_test:.4f} | acc: {acc_test:.4f}")
+            print(f"  Time: {time.time() - t_epoch_begin:.4f}s")
+            print('-----------------------------------------')
+            
+            #lr scheduler
+            scheduler.step(loss_val)
+            
+
+            early_stopping(loss_val, GraphBertNodeClassification)
+            
+            # Early stopping
             if early_stopping.early_stop:
+                print("Early stopping triggered.")
                 break
 
+
+        print("Optimization Finished!")
+        print("Total time elapsed: {:.4f}s".format(time.time() - t_begin) + ', \
+            best testing performance {: 4f}'.format(np.max([classify_learning_record_dict[epoch]['acc_test'] for epoch in classify_learning_record_dict])) \
+                + ', minimun loss {: 4f}'.format(np.min([classify_learning_record_dict[epoch]['loss_test'] for epoch in classify_learning_record_dict])))
+
+
         save_obj(classify_learning_record_dict, f"{workdir}/classify_learning_record_dict.pth")
+        print(f"training procedure saved")
         save_obj(GraphBertNodeClassification.state_dict(), f"{workdir}/model_tuned.pt")
+        print(f"Model saved")
 
     else:
         raise ValueError(f"Unknown step {step}")
