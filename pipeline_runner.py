@@ -156,7 +156,8 @@ def main(step, workdir):
         GraphBertNodeClassification = MethodGraphBertNodeClassification(bert_config)
         checkPoint_path = f"{workdir}/check_point"
         os.makedirs("/tmp/check_point", exist_ok=True)
-
+        
+        print("change sucessful")
         train_loader, test_loader, val_loader, accuracy, optimizer, scheduler, early_stopping = step_4(
             GraphBertNodeClassification, raw_embeddings, wl_embedding, hop_embeddings, int_embeddings, data, checkPoint_path, args
         )
