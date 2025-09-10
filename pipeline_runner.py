@@ -146,79 +146,82 @@ def main(step, workdir):
         print(f"[Pretrain is done")
         
     elif step == "finetune":
+        
         print("=== ENTER FINETUNE ===", flush=True)
+
+        # ------------------- load data & config -------------------
         raw_embeddings, wl_embedding, hop_embeddings, int_embeddings, data = load_obj(f"{workdir}/embeddings.pth")
         bert_config, args = load_obj(f"{workdir}/bert_config.pth")
         print("Loaded embeddings and config OK", flush=True)
+
         bert_config.output_attentions = False
         bert_config.output_hidden_states = False
-        print("change successful")
-        
-        GraphBertNodeClassification = MethodGraphBertNodeClassification(bert_config)
-        checkPoint_path = f"{workdir}/check_point"
-        os.makedirs("/tmp/check_point", exist_ok=True)
-        print("Model initialized OK", flush=True)
+        print("Changed config flags", flush=True)
 
+        # ------------------- device -------------------
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        print("Using device:", device, flush=True)
 
+        GraphBertNodeClassification = MethodGraphBertNodeClassification(bert_config).to(device)
+        raw_embeddings = raw_embeddings.to(device)
+        wl_embedding = wl_embedding.to(device)
+        hop_embeddings = hop_embeddings.to(device)
+        int_embeddings = int_embeddings.to(device)
+        data = data.to(device)
+        print("Model and data moved to device", flush=True)
+
+        # ------------------- checkpoint path -------------------
+        local_checkpoint_path = "/tmp/check_point"
+        os.makedirs(local_checkpoint_path, exist_ok=True)
+        print("Checkpoint path prepared:", local_checkpoint_path, flush=True)
+
+        # ------------------- loaders, optimizer, scheduler -------------------
         train_loader, test_loader, val_loader, accuracy, optimizer, scheduler, early_stopping = step_4(
-            GraphBertNodeClassification, raw_embeddings, wl_embedding, hop_embeddings, int_embeddings, data, checkPoint_path, args
+            GraphBertNodeClassification,
+            raw_embeddings, wl_embedding, hop_embeddings, int_embeddings, data,
+            local_checkpoint_path, args
         )
         print("Step 4 setup OK", flush=True)
-        
+
+        # ------------------- training loop -------------------
         max_epoch = 100
         classify_learning_record_dict = {}
-        max_score = 0.0
         t_begin = time.time()
+
         for epoch in range(max_epoch):
             t_epoch_begin = time.time()
-
             GraphBertNodeClassification.train()
 
             epoch_loss = 0.0
             epoch_correct = 0
             epoch_total = 0
-            
+
             for load in train_loader:
-
-                optimizer.zero_grad()            
-                
-                output  = GraphBertNodeClassification(
-                    raw_embeddings, wl_embedding, int_embeddings, hop_embeddings, data, idx=load)
-                
-                # Two loss functions
-                loss_train = F.cross_entropy(output, data.y[load])
-                
+                optimizer.zero_grad()
+                idx = list(load)  # 确保索引是 list
+                output = GraphBertNodeClassification(raw_embeddings, wl_embedding, int_embeddings, hop_embeddings, data, idx=idx)
+                loss_train = F.cross_entropy(output, data.y[idx])
                 loss_train.backward()
-                
-                pred = (output).max(1)[1]
-                correct = pred.eq(data.y[load]).sum().item()
-
-                # epoch_loss += loss_train.item() * len(batch_idx)
-                epoch_loss += loss_train.item() * len(load)# based on the number of samples
-                
                 optimizer.step()
-                
-                
+
+                pred = output.max(1)[1]
+                correct = pred.eq(data.y[idx]).sum().item()
+
+                epoch_loss += loss_train.item() * len(idx)
                 epoch_correct += correct
-                
-                # epoch_total += len(batch_idx)
-                epoch_total += len(load)
-                
-                
-                # print(f"Batch {i+1}/{num_batches}, Loss: {loss_train.item():.4f}, Accuracy: {correct/len(batch_idx):.4f}")
-                
+                epoch_total += len(idx)
 
             loss_train_avg = epoch_loss / epoch_total
             acc_train_avg = epoch_correct / epoch_total
 
-            # evaluation
-            GraphBertNodeClassification.eval()#frozen
-            
-            # Validate (using mini-batch)
-            acc_val, loss_val, accuracy_val, precision_val, recall_val, f1_val, roc_auc_val, confusion_matrix_val = evaluate_in_batches(GraphBertNodeClassification, raw_embeddings, wl_embedding, int_embeddings, hop_embeddings, data, val_loader, batch_size=20)
-
-            # Test (using mini-batch)
-            acc_test, loss_test, accuracy_test, precision_test, recall_test, f1_test, roc_auc_test, confusion_matrix_test = evaluate_in_batches(GraphBertNodeClassification, raw_embeddings, wl_embedding, int_embeddings, hop_embeddings, data, test_loader, batch_size=20)
+            # ------------------- evaluation -------------------
+            GraphBertNodeClassification.eval()
+            acc_val, loss_val, accuracy_val, precision_val, recall_val, f1_val, roc_auc_val, confusion_matrix_val = evaluate_in_batches(
+                GraphBertNodeClassification, raw_embeddings, wl_embedding, int_embeddings, hop_embeddings, data, val_loader, batch_size=20
+            )
+            acc_test, loss_test, accuracy_test, precision_test, recall_test, f1_test, roc_auc_test, confusion_matrix_test = evaluate_in_batches(
+                GraphBertNodeClassification, raw_embeddings, wl_embedding, int_embeddings, hop_embeddings, data, test_loader, batch_size=20
+            )
 
             classify_learning_record_dict[epoch] = {
                 'loss_train': loss_train_avg,
@@ -230,35 +233,25 @@ def main(step, workdir):
                 'time': time.time() - t_epoch_begin
             }
 
-            print(f"Epoch: {epoch+1:04d}")
-            print(f"  [Train] loss: {loss_train_avg:.4f} | acc: {acc_train_avg:.4f}")
-            print(f"  [Valid] loss: {loss_val:.4f} | acc: {acc_val:.4f}")
-            print(f"  [Test ] loss: {loss_test:.4f} | acc: {acc_test:.4f}")
-            print(f"  Time: {time.time() - t_epoch_begin:.4f}s")
-            print('-----------------------------------------')
-            
-            #lr scheduler
-            scheduler.step(loss_val)
-            
+            print(f"Epoch {epoch+1:04d} | Train loss {loss_train_avg:.4f}, acc {acc_train_avg:.4f} | "
+                f"Val loss {loss_val:.4f}, acc {acc_val:.4f} | Test acc {acc_test:.4f} | "
+                f"Time {time.time()-t_epoch_begin:.2f}s", flush=True)
 
+            scheduler.step(loss_val)
             early_stopping(loss_val, GraphBertNodeClassification)
-            
-            # Early stopping
+
             if early_stopping.early_stop:
-                print("Early stopping triggered.")
+                print("Early stopping triggered.", flush=True)
                 break
 
+        print("Optimization Finished!", flush=True)
+        print("Total time elapsed: {:.2f}s".format(time.time()-t_begin), flush=True)
 
-        print("Optimization Finished!")
-        print("Total time elapsed: {:.4f}s".format(time.time() - t_begin) + ', \
-            best testing performance {: 4f}'.format(np.max([classify_learning_record_dict[epoch]['acc_test'] for epoch in classify_learning_record_dict])) \
-                + ', minimun loss {: 4f}'.format(np.min([classify_learning_record_dict[epoch]['loss_test'] for epoch in classify_learning_record_dict])))
-
-
+        # ------------------- save results -------------------
         save_obj(classify_learning_record_dict, f"{workdir}/classify_learning_record_dict.pth")
-        print(f"training procedure saved")
         save_obj(GraphBertNodeClassification.state_dict(), f"{workdir}/model_tuned.pt")
-        print(f"Model saved")
+        print("Training records and model saved", flush=True)
+
 
     else:
         raise ValueError(f"Unknown step {step}")
