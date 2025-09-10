@@ -63,7 +63,7 @@ def main(step, workdir):
 
     elif step == "step2":
         data = load_obj(f"{workdir}/data.pth")
-        raw_embeddings, wl_embedding, hop_embeddings, int_embeddings, data = step_2(workdir, data, k=7)
+        raw_embeddings, wl_embedding, hop_embeddings, int_embeddings, data = step_2(workdir, data, top_k=7)
         save_obj((raw_embeddings, wl_embedding, hop_embeddings, int_embeddings, data), f"{workdir}/embeddings.pth")
         print("step2 done")
 
