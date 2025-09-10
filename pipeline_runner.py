@@ -143,7 +143,8 @@ def main(step, workdir):
                 print(f"[Pretrain] epoch {epoch}, loss={loss_train.item():.4f}")
 
         save_obj(GraphBertNodeConstruct.state_dict(), f"{workdir}/pretrained_model.pth")
-
+        print(f"[Pretrain is done")
+        
     elif step == "finetune":
         raw_embeddings, wl_embedding, hop_embeddings, int_embeddings, data = load_obj(f"{workdir}/embeddings.pth")
         bert_config, args = load_obj(f"{workdir}/bert_config.pth")
