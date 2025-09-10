@@ -7,17 +7,15 @@ from step_3_setting import step_3
 from step_4_classification import step_4
 from Model.MethodGraphBertNode import MethodGraphBertNodeConstruct
 from Model.MethodGraphBertNodeClassification import MethodGraphBertNodeClassification
-from utilities.evaluation import evaluate_in_batches
 import torch.nn.functional as F
 import torch.optim as optim
-import gcsfs
-
 from google.cloud import storage
-import os
+import sys
+
 print("GOOGLE_APPLICATION_CREDENTIALS:", os.environ.get("GOOGLE_APPLICATION_CREDENTIALS"))
+print("ARGV:", sys.argv)
 
-
-# ------------------- 保存/读取支持 GCS -------------------
+# ------------------- GCS 文件操作 -------------------
 def save_obj(obj, path):
     if path.startswith("gs://"):
         client = storage.Client()
@@ -54,24 +52,20 @@ def load_obj(path):
         print(f"[load_obj] Failed to load object from {path}: {e}")
         raise
 
-
 # ------------------- 主流程 -------------------
 def main(step, workdir):
-    os.makedirs("/tmp/workdir", exist_ok=True)  # 本地缓存文件夹
+    os.makedirs("/tmp/workdir", exist_ok=True)
 
     if step == "step1":
-        data = step_1(workdir)  # workdir 是 gs:// 路径
+        data = step_1(workdir)
         save_obj(data, f"{workdir}/data.pth")
-        print("workdir:", workdir)
-        print("data:", data)
-
+        print("step1 done")
 
     elif step == "step2":
-        print(f"{workdir}/data.pth")
-
         data = load_obj(f"{workdir}/data.pth")
-        raw_embeddings, wl_embedding, hop_embeddings, int_embeddings, data = step_2(workdir, data, top_k=7)
+        raw_embeddings, wl_embedding, hop_embeddings, int_embeddings, data = step_2(workdir, data, k=7)
         save_obj((raw_embeddings, wl_embedding, hop_embeddings, int_embeddings, data), f"{workdir}/embeddings.pth")
+        print("step2 done")
 
     elif step == "step3":
         _, _, _, _, data = load_obj(f"{workdir}/embeddings.pth")
@@ -79,6 +73,7 @@ def main(step, workdir):
         args = set_args(data)
         bert_config = step_3(data, args)
         save_obj((bert_config, args), f"{workdir}/bert_config.pth")
+        print("step3 done")
 
     elif step == "pretrain":
         raw_embeddings, wl_embedding, hop_embeddings, int_embeddings, data = load_obj(f"{workdir}/embeddings.pth")
@@ -87,8 +82,7 @@ def main(step, workdir):
         GraphBertNodeConstruct = MethodGraphBertNodeConstruct(bert_config)
         optimizer = optim.AdamW(GraphBertNodeConstruct.parameters(), lr=args.base_lr, weight_decay=args.weight_decay)
 
-        max_epoch = 200
-        for epoch in range(max_epoch):
+        for epoch in range(200):
             GraphBertNodeConstruct.train()
             optimizer.zero_grad()
             output = GraphBertNodeConstruct(raw_embeddings, wl_embedding, int_embeddings, hop_embeddings)
@@ -99,6 +93,7 @@ def main(step, workdir):
                 print(f"[Pretrain] epoch {epoch}, loss={loss_train.item():.4f}")
 
         save_obj(GraphBertNodeConstruct.state_dict(), f"{workdir}/pretrained_model.pth")
+        print("pretrain done")
 
     elif step == "finetune":
         raw_embeddings, wl_embedding, hop_embeddings, int_embeddings, data = load_obj(f"{workdir}/embeddings.pth")
@@ -112,13 +107,10 @@ def main(step, workdir):
             GraphBertNodeClassification, raw_embeddings, wl_embedding, hop_embeddings, int_embeddings, data, checkPoint_path, args
         )
 
-        max_epoch = 100
         classify_learning_record_dict = {}
-        for epoch in range(max_epoch):
+        for epoch in range(100):
             GraphBertNodeClassification.train()
-            epoch_loss = 0.0
-            epoch_correct = 0
-            epoch_total = 0
+            epoch_loss, epoch_correct, epoch_total = 0, 0, 0
             for load in train_loader:
                 optimizer.zero_grad()
                 output = GraphBertNodeClassification(raw_embeddings, wl_embedding, int_embeddings, hop_embeddings, data, idx=load)
@@ -130,9 +122,7 @@ def main(step, workdir):
                 epoch_loss += loss_train.item() * len(load)
                 epoch_correct += correct
                 epoch_total += len(load)
-
             print(f"[Finetune] epoch {epoch}, loss={epoch_loss/epoch_total:.4f}, acc={epoch_correct/epoch_total:.4f}")
-
             scheduler.step(epoch_loss)
             early_stopping(epoch_loss, GraphBertNodeClassification)
             if early_stopping.early_stop:
@@ -140,14 +130,24 @@ def main(step, workdir):
 
         save_obj(classify_learning_record_dict, f"{workdir}/classify_learning_record_dict.pth")
         save_obj(GraphBertNodeClassification.state_dict(), f"{workdir}/model_tuned.pt")
+        print("finetune done")
 
     else:
         raise ValueError(f"Unknown step {step}")
 
 # ------------------- CLI -------------------
 if __name__ == "__main__":
+    # 只提取我们关心的参数，过滤 Vertex AI 内部参数
+    args_list = []
+    for i, val in enumerate(sys.argv):
+        if val in ("--step", "--workdir"):
+            args_list.append(val)
+            if i + 1 < len(sys.argv):
+                args_list.append(sys.argv[i + 1])
+
     parser = argparse.ArgumentParser()
     parser.add_argument("--step", type=str, required=True)
     parser.add_argument("--workdir", type=str, required=True)
-    args = parser.parse_args()
+    args = parser.parse_args(args_list)
+
     main(args.step, args.workdir)

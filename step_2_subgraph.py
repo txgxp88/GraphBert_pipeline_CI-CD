@@ -53,13 +53,13 @@ def step_2(dir_path, data, top_k):
     wl_coloring.setting_init(data.node_list, data.edge_index)
     wl_coloring.WL_recursion(data.node_list)
 
-    # 临时目录保存 WL coloring
+    # temporal store WL coloring
     tmp_dir = tempfile.mkdtemp()
     wl_local_path = os.path.join(tmp_dir, "WL.pkl")
     wl_coloring.save_coloring(wl_local_path)
     wl_dict = pickle.load(open(wl_local_path, "rb"))
 
-    # 上传到 GCS
+    # upload to GCS
     wl_gcs_path = os.path.join(dir_path, "WL/WL.pkl")
     upload_to_gcs(wl_local_path, wl_gcs_path)
 
