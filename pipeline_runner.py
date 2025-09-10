@@ -57,7 +57,6 @@ def load_obj(path):
         print(f"[load_obj] Failed to load object from {path}: {e}")
         raise
 
-
 def set_args(data, yaml_path=None):
     import argparse
     parser = argparse.ArgumentParser(description="Graph Model Training Settings")
@@ -76,17 +75,45 @@ def set_args(data, yaml_path=None):
     else:
         cfg = {}
     
-    # 用 yaml 里的参数覆盖默认值
-    parser.add_argument('--initializer_range', type=float, default=cfg.get("initializer_range", 0.02))
-    parser.add_argument('--num_hidden_layers', type=int, default=cfg.get("num_hidden_layers", 2))
-    parser.add_argument('--hidden_size', type=int, default=cfg.get("hidden_size", 32))
-    # ... 其他参数照样加
+    model_cfg = cfg.get("model", {})
+    bert_cfg = cfg.get("bert", {})
+    training_cfg = cfg.get("training", {})
+    early_stopping_cfg = cfg.get("earlyStopping", {})
     
-    # 数据相关还是要从 data 里动态获取
-    parser.add_argument('--k', type=int, default=len(data.y.unique()))
-    parser.add_argument('--nclass', type=int, default=len(data.y.unique()))
-    parser.add_argument('--nfeature', type=int, default=data.x.shape[1])
-    parser.add_argument('--ngraph', type=int, default=data.x.shape[0])
+    # Model Config
+    parser.add_argument('--initializer_range', type=float, default=model_cfg.get("initializer_range", 0.02))
+    parser.add_argument('--num_hidden_layers', type=int, default=model_cfg.get("num_hidden_layers", 2))
+    parser.add_argument('--hidden_size', type=int, default=model_cfg.get("hidden_size", 32))
+    parser.add_argument('--num_attention_heads', type=int, default=model_cfg.get("num_attention_heads", 4))
+    parser.add_argument('--intermediate_size', type=int, default=model_cfg.get("intermediate_size", 128))
+    parser.add_argument('--hidden_dropout_prob', type=float, default=model_cfg.get("hidden_dropout_prob", 0.1))
+    parser.add_argument('--attention_probs_dropout_prob', type=float, default=model_cfg.get("attention_probs_dropout_prob", 0.1))
+    parser.add_argument('--hidden_act', type=str, default=model_cfg.get("hidden_act", "gelu"))
+    parser.add_argument('--layer_norm_eps', type=float, default=model_cfg.get("layer_norm_eps", 1e-12))
+    parser.add_argument('--residual_type', type=str, default=model_cfg.get("residual_type", None))
+
+    # bert
+    parser.add_argument('--max_wl_role_index', type=int, default=bert_cfg.get("max_wl_role_index", 100))
+    parser.add_argument('--max_hop_dis_index', type=int, default=bert_cfg.get("max_hop_dis_index", 100))
+    parser.add_argument('--max_inti_pos_index', type=int, default=bert_cfg.get("max_inti_pos_index", 100))
+    parser.add_argument('--top_k', type=int, default=bert_cfg.get("top_k", 7))
+
+    # training
+    parser.add_argument('--batch_size', type=int, default=training_cfg.get("batch_size", 64))
+    parser.add_argument('--mode', type=str, default=training_cfg.get("mode", "min"))
+    parser.add_argument('--base_lr', type=float, default=training_cfg.get("base_lr", 0.001))
+    parser.add_argument('--weight_decay', type=float, default=training_cfg.get("weight_decay", 0.0001))
+    parser.add_argument('--factor', type=float, default=training_cfg.get("factor", 0.5))
+    parser.add_argument('--decay_factor', type=float, default=training_cfg.get("decay_factor", 0.9))
+    
+    # early stopping
+    parser.add_argument('--patience', type=int, default=early_stopping_cfg.get("patience", 30))
+    parser.add_argument('--mode', type=str, default=early_stopping_cfg.get("mode", "min"))
+    
+    #Data Config
+    parser.add_argument('--k', type=int, default=len(data.y.unique()), help='embedding dimension')
+    parser.add_argument('--nfeature', type=int, default=data.x.shape[1], help='nfeature')
+    parser.add_argument('--ngraph', type=int, default=data.x.shape[0], help='ngraph or nodes')
 
     args = parser.parse_args([])
     return args

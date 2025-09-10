@@ -22,7 +22,6 @@ def set_args(data):
     
     parser = argparse.ArgumentParser(description="Graph Model Training Settings")
     
-    
     # Network setting
     parser.add_argument('--initializer_range', type=float, default=0.02, help='initializer_range')
     parser.add_argument('--num_hidden_layers', type=int, default=2, help='Number Of HiddenLayers')

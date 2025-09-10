@@ -22,9 +22,11 @@ bert:
 
 training:
       batch_size: 64
-      patience: 30
-      mode: "min"
       base_lr: 0.001
       weight_decay: 0.0001
       factor: 0.5
       decay_factor: 0.9 
+
+earlyStopping:
+      patience: 30
+      mode: "min"
