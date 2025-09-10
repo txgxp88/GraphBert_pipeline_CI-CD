@@ -121,12 +121,12 @@ def main(step, workdir):
     elif step == "step3":
         _, _, _, _, data = load_obj(f"{workdir}/embeddings.pth")        
         args = set_args(data)
-        bert_config = step_3(data, args)
-        save_obj((bert_config, args), f"{workdir}/bert_config.pth")
+        bert_config,config = step_3(data, args)
+        save_obj((bert_config, config, args), f"{workdir}/bert_config.pth")
 
     elif step == "pretrain":
         raw_embeddings, wl_embedding, hop_embeddings, int_embeddings, data = load_obj(f"{workdir}/embeddings.pth")
-        bert_config, args = load_obj(f"{workdir}/bert_config.pth")
+        bert_config, config, args = load_obj(f"{workdir}/bert_config.pth")
 
         GraphBertNodeConstruct = MethodGraphBertNodeConstruct(bert_config)
         optimizer = optim.AdamW(GraphBertNodeConstruct.parameters(), lr=args.base_lr, weight_decay=args.weight_decay)
@@ -146,7 +146,7 @@ def main(step, workdir):
 
     elif step == "finetune":
         raw_embeddings, wl_embedding, hop_embeddings, int_embeddings, data = load_obj(f"{workdir}/embeddings.pth")
-        bert_config, args = load_obj(f"{workdir}/bert_config.pth")
+        bert_config, config, args = load_obj(f"{workdir}/bert_config.pth")
 
         GraphBertNodeClassification = MethodGraphBertNodeClassification(bert_config)
         checkPoint_path = f"{workdir}/check_point"

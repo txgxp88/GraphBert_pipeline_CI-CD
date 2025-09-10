@@ -125,6 +125,7 @@ def step_3(data, args):
     config.output_attentions = False
     config.output_hidden_states = False
     config.num_hidden_layers = num_hidden_layers
+    
 
 
     bert_config = GraphBertConfig(residual_type = residual_type, k=k, x_size=nfeature, y_size=y_size, \
@@ -135,7 +136,7 @@ def step_3(data, args):
                                 input_feature = data.x 
                                 )
 
-    return bert_config
+    return bert_config, config
 
 
 
