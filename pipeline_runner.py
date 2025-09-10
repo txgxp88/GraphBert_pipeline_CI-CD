@@ -58,55 +58,38 @@ def load_obj(path):
         raise
 
 
-def set_args(data, yaml_path):
-    """
-    load from config.yaml, and autofill combining with data
-    """
-    with open(yaml_path, "r") as f:
-        cfg = yaml.safe_load(f)
-
+def set_args(data, yaml_path=None):
+    import argparse
     parser = argparse.ArgumentParser(description="Graph Model Training Settings")
 
-    # --- Network setting ---
-    m = cfg.get("model", {})
-    parser.add_argument('--initializer_range', type=float, default=m.get("initializer_range", 0.02))
-    parser.add_argument('--num_hidden_layers', type=int, default=m.get("num_hidden_layers", 2))
-    parser.add_argument('--hidden_size', type=int, default=m.get("hidden_size", 32))
-    parser.add_argument('--num_attention_heads', type=int, default=m.get("num_attention_heads", 4))
-    parser.add_argument('--intermediate_size', type=int, default=m.get("intermediate_size", 128))
-    parser.add_argument('--hidden_dropout_prob', type=float, default=m.get("hidden_dropout_prob", 0.2))
-    parser.add_argument('--attention_probs_dropout_prob', type=float, default=m.get("attention_probs_dropout_prob", 0.2))
-    parser.add_argument('--hidden_act', type=str, default=m.get("hidden_act", "gelu"))
-    parser.add_argument('--layer_norm_eps', type=float, default=m.get("layer_norm_eps", 1e-12))
-    parser.add_argument('--residual_type', type=str, default=m.get("residual_type", "graph_raw"))
+    if yaml_path:
+        if yaml_path.startswith("gs://"):
+            client = storage.Client()
+            bucket_name, blob_name = yaml_path[5:].split("/", 1)
+            tmp_path = "/tmp/model_training_config.yml"
+            print(f"[set_args] Downloading {yaml_path} -> {tmp_path}")
+            client.bucket(bucket_name).blob(blob_name).download_to_filename(tmp_path)
+            yaml_path = tmp_path
 
-    # --- Bert config ---
-    b = cfg.get("bert", {})
-    parser.add_argument('--max_wl_role_index', type=int, default=b.get("max_wl_role_index", 100))
-    parser.add_argument('--max_hop_dis_index', type=int, default=b.get("max_hop_dis_index", 100))
-    parser.add_argument('--max_inti_pos_index', type=int, default=b.get("max_inti_pos_index", 100))
-    parser.add_argument('--top_k', type=int, default=b.get("top_k", 7))
-
-    # --- Data config (refer to data) ---
+        with open(yaml_path, "r") as f:
+            cfg = yaml.safe_load(f)
+    else:
+        cfg = {}
+    
+    # 用 yaml 里的参数覆盖默认值
+    parser.add_argument('--initializer_range', type=float, default=cfg.get("initializer_range", 0.02))
+    parser.add_argument('--num_hidden_layers', type=int, default=cfg.get("num_hidden_layers", 2))
+    parser.add_argument('--hidden_size', type=int, default=cfg.get("hidden_size", 32))
+    # ... 其他参数照样加
+    
+    # 数据相关还是要从 data 里动态获取
+    parser.add_argument('--k', type=int, default=len(data.y.unique()))
     parser.add_argument('--nclass', type=int, default=len(data.y.unique()))
     parser.add_argument('--nfeature', type=int, default=data.x.shape[1])
     parser.add_argument('--ngraph', type=int, default=data.x.shape[0])
-    parser.add_argument('--k', type=int, default=len(data.y.unique()))
 
-    # --- Training config ---
-    t = cfg.get("training", {})
-    parser.add_argument('--batch_size', type=int, default=t.get("batch_size", 64))
-    parser.add_argument('--patience', type=int, default=t.get("patience", 30))
-    parser.add_argument('--mode', type=str, default=t.get("mode", "min"))
-    parser.add_argument('--base_lr', type=float, default=t.get("base_lr", 1e-3))
-    parser.add_argument('--weight_decay', type=float, default=t.get("weight_decay", 1e-4))
-    parser.add_argument('--factor', type=float, default=t.get("factor", 0.5))
-    parser.add_argument('--decay_factor', type=float, default=t.get("decay_factor", 0.9))
-
-    # do not use sys.argv
     args = parser.parse_args([])
     return args
-
 
 
 # ------------------- main -------------------
