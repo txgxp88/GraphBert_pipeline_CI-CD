@@ -146,7 +146,9 @@ def main(step, workdir):
 
     elif step == "finetune":
         raw_embeddings, wl_embedding, hop_embeddings, int_embeddings, data = load_obj(f"{workdir}/embeddings.pth")
-        bert_config, config, args = load_obj(f"{workdir}/bert_config.pth")
+        bert_config, args = load_obj(f"{workdir}/bert_config.pth")
+        bert_config.output_attentions = False
+        bert_config.output_hidden_states = False
 
         GraphBertNodeClassification = MethodGraphBertNodeClassification(bert_config)
         checkPoint_path = f"{workdir}/check_point"
