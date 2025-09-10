@@ -1,0 +1,30 @@
+model:
+      initializer_range: 0.02
+      num_hidden_layers: 2
+      hidden_size: 32
+      num_attention_heads: 4
+      intermediate_size: 128
+      hidden_dropout_prob: 0.2
+      attention_probs_dropout_prob: 0.2
+      hidden_act: "gelu"
+      layer_norm_eps: 1e-12
+      residual_type: "graph_raw" # 'graph_raw or raw or None'
+
+bert:
+      max_wl_role_index: 100 # maximum number of Weisfeiler-Lehman role identifiers
+      max_hop_dis_index: 100 # maximum number of Weisfeiler-Lehman role identifiers
+      max_inti_pos_index: 100 # maximum number of Weisfeiler-Lehman role identifiers
+      top_k: 7 # number of neighbors to consider in graph attention
+
+# PretrainPath (if it is necessary):
+#       model_dir: "pretrained_model/GraphBert_pretrain_4layer_32dim"
+#       model_file: "model.ckpt-1000000"
+
+training:
+      batch_size: 64
+      patience: 30
+      mode: "min"
+      base_lr: 0.001
+      weight_decay: 0.0001
+      factor: 0.5
+      decay_factor: 0.9 

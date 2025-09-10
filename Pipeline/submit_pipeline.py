@@ -1,14 +1,20 @@
+import yaml
 from google.cloud import aiplatform
 
-aiplatform.init(project="my-gitrunning-55025", location="us-central1")
+with open("pipeline_config.yml", "r") as f:
+    cfg = yaml.safe_load(f)
 
+# initialize the 
+aiplatform.init(project=cfg["project"], location=cfg["location"])
+
+# create and run the pipeline job
 job = aiplatform.PipelineJob(
-    display_name="graphbert-pipeline-run",
-    template_path="graphbert_pipeline.yaml",  # or .json
-    pipeline_root="gs://my-graphbert-bucket/graphbert",  # <-- Must be valid gs:// path
-    parameter_values={
-        "workdir": "gs://my-graphbert-bucket/graphbert"
-    }
+    display_name=cfg["display_name"],
+    template_path=cfg["template_path"],
+    pipeline_root=cfg["pipeline_root"],
+    parameter_values=cfg["parameter_values"]
 )
 
 job.run()
+
+

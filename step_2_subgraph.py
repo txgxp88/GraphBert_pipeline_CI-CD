@@ -28,7 +28,7 @@ def sparse_mx_to_torch_sparse_tensor(sparse_mx):
     return torch.sparse.FloatTensor(indices, values, shape)
 
 def upload_to_gcs(local_path, gcs_path):
-    """将本地文件上传到 GCS"""
+    #upload_to_gcs(local_path, gcs_path):
     if gcs_path.startswith("gs://"):
         client = storage.Client()
         bucket_name, blob_name = gcs_path[5:].split("/", 1)
