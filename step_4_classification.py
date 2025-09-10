@@ -53,7 +53,7 @@ def step_4(GraphBertNodeClassification, raw_embeddings, wl_embedding, hop_embedd
 
 
     # Early Stopping
-    early_stopping = EarlyStopping(patience=args.patience, mode=args.mode, path=f'{checkPoint_path}checkpoint.pt')
+    early_stopping = EarlyStopping(patience=args.patience, mode=args.mode, path=f'{checkPoint_path}/checkpoint.pt')
     # early_stopping = EarlyStopping(patience=30, mode='min', path=f'{checkPoint_path}checkpoint.pt')
 
 
