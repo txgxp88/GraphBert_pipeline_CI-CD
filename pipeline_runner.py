@@ -57,10 +57,14 @@ def load_obj(path):
         print(f"[load_obj] Failed to load object from {path}: {e}")
         raise
 
-def set_args(data, yaml_path=None):
-    import argparse
+def set_args(data, yaml_path):
+    import argparse, yaml
+    from google.cloud import storage
+
     parser = argparse.ArgumentParser(description="Graph Model Training Settings")
 
+    # ---------------- load yaml ----------------
+    cfg = {}
     if yaml_path:
         if yaml_path.startswith("gs://"):
             client = storage.Client()
@@ -72,15 +76,16 @@ def set_args(data, yaml_path=None):
 
         with open(yaml_path, "r") as f:
             cfg = yaml.safe_load(f)
+            print(f"[set_args] Loaded config from {yaml_path}")
     else:
-        cfg = {}
-    
+        print("[set_args] No yaml_path provided, using default parameters only")
+
     model_cfg = cfg.get("model", {})
     bert_cfg = cfg.get("bert", {})
     training_cfg = cfg.get("training", {})
     early_stopping_cfg = cfg.get("earlyStopping", {})
-    
-    # Model Config
+
+    # ---------------- model ----------------
     parser.add_argument('--initializer_range', type=float, default=model_cfg.get("initializer_range", 0.02))
     parser.add_argument('--num_hidden_layers', type=int, default=model_cfg.get("num_hidden_layers", 2))
     parser.add_argument('--hidden_size', type=int, default=model_cfg.get("hidden_size", 32))
@@ -92,26 +97,27 @@ def set_args(data, yaml_path=None):
     parser.add_argument('--layer_norm_eps', type=float, default=model_cfg.get("layer_norm_eps", 1e-12))
     parser.add_argument('--residual_type', type=str, default=model_cfg.get("residual_type", None))
 
-    # bert
+    # ---------------- bert ----------------
     parser.add_argument('--max_wl_role_index', type=int, default=bert_cfg.get("max_wl_role_index", 100))
     parser.add_argument('--max_hop_dis_index', type=int, default=bert_cfg.get("max_hop_dis_index", 100))
     parser.add_argument('--max_inti_pos_index', type=int, default=bert_cfg.get("max_inti_pos_index", 100))
     parser.add_argument('--top_k', type=int, default=bert_cfg.get("top_k", 7))
 
-    # training
+    # ---------------- training ----------------
     parser.add_argument('--batch_size', type=int, default=training_cfg.get("batch_size", 64))
-    parser.add_argument('--mode', type=str, default=training_cfg.get("mode", "min"))
+    parser.add_argument('--train_mode', type=str, default=training_cfg.get("mode", "min"))  # 避免和 earlyStopping 冲突
     parser.add_argument('--base_lr', type=float, default=training_cfg.get("base_lr", 0.001))
     parser.add_argument('--weight_decay', type=float, default=training_cfg.get("weight_decay", 0.0001))
     parser.add_argument('--factor', type=float, default=training_cfg.get("factor", 0.5))
     parser.add_argument('--decay_factor', type=float, default=training_cfg.get("decay_factor", 0.9))
-    
-    # early stopping
+
+    # ---------------- early stopping ----------------
     parser.add_argument('--patience', type=int, default=early_stopping_cfg.get("patience", 30))
-    parser.add_argument('--mode', type=str, default=early_stopping_cfg.get("mode", "min"))
-    
-    #Data Config
-    parser.add_argument('--k', type=int, default=len(data.y.unique()), help='embedding dimension')
+    parser.add_argument('--es_mode', type=str, default=early_stopping_cfg.get("mode", "min"))
+
+    # ---------------- data-driven params ----------------
+    parser.add_argument('--k', type=int, default=len(data.y.unique()), help='number of classes (same as nclass)')
+    parser.add_argument('--nclass', type=int, default=len(data.y.unique()), help='number of classes')
     parser.add_argument('--nfeature', type=int, default=data.x.shape[1], help='nfeature')
     parser.add_argument('--ngraph', type=int, default=data.x.shape[0], help='ngraph or nodes')
 
