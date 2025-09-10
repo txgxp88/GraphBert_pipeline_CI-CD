@@ -148,20 +148,19 @@ def main(step, workdir):
     elif step == "finetune":
         raw_embeddings, wl_embedding, hop_embeddings, int_embeddings, data = load_obj(f"{workdir}/embeddings.pth")
         bert_config, args = load_obj(f"{workdir}/bert_config.pth")
-        print("loading sucessful")
         bert_config.output_attentions = False
         bert_config.output_hidden_states = False
-        print("change sucessful")
+        print("change successful")
         
         GraphBertNodeClassification = MethodGraphBertNodeClassification(bert_config)
         checkPoint_path = f"{workdir}/check_point"
         os.makedirs("/tmp/check_point", exist_ok=True)
-        
-        print("change sucessful")
+
         train_loader, test_loader, val_loader, accuracy, optimizer, scheduler, early_stopping = step_4(
             GraphBertNodeClassification, raw_embeddings, wl_embedding, hop_embeddings, int_embeddings, data, checkPoint_path, args
         )
-
+        
+        
         max_epoch = 100
         classify_learning_record_dict = {}
         max_score = 0.0
@@ -179,7 +178,7 @@ def main(step, workdir):
 
                 optimizer.zero_grad()            
                 
-                output  = GraphBertNodeClassification.forward(
+                output  = GraphBertNodeClassification(
                     raw_embeddings, wl_embedding, int_embeddings, hop_embeddings, data, idx=load)
                 
                 # Two loss functions

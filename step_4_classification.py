@@ -20,9 +20,6 @@ def step_4(GraphBertNodeClassification, raw_embeddings, wl_embedding, hop_embedd
     idx_test = range(200, 1200)
     idx_val = range(1200, 1500)
 
-
-    classify_learning_record_dict = {}
-
     # train_loader = DataLoader(idx_train, batch_size=64, shuffle=True)
     # test_loader = DataLoader(idx_test, batch_size=64, shuffle=True)
     # val_loader = DataLoader(idx_val, batch_size=64, shuffle=True)
