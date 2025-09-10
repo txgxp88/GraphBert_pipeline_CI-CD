@@ -198,7 +198,7 @@ def main(step, workdir):
 
             for load in train_loader:
                 optimizer.zero_grad()
-                idx = list(load)  # 确保索引是 list
+                idx = load
                 output = GraphBertNodeClassification(raw_embeddings, wl_embedding, int_embeddings, hop_embeddings, data, idx=idx)
                 loss_train = F.cross_entropy(output, data.y[idx])
                 loss_train.backward()
