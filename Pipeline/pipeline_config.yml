@@ -8,9 +8,9 @@ location: us-central1
 pipeline_root: gs://my-graphbert-bucket/graphbert
 display_name: graphbert-pipeline-run
 template_path: graphbert_pipeline.yaml
+IMAGE_URI: "us-central1-docker.pkg.dev/my-gitrunning-55025/my-docker-repo/myapp:latest"
 parameter_values:
   # config_path: gs://my-graphbert-bucket/Pipeline/pipeline_config.yaml
   workdir: gs://my-graphbert-bucket/graphbert
-  IMAGE_URI: "us-central1-docker.pkg.dev/my-gitrunning-55025/my-docker-repo/myapp:latest"
 
 
