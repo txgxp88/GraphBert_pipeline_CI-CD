@@ -146,8 +146,10 @@ def main(step, workdir):
         print(f"[Pretrain is done")
         
     elif step == "finetune":
+        print("=== ENTER FINETUNE ===", flush=True)
         raw_embeddings, wl_embedding, hop_embeddings, int_embeddings, data = load_obj(f"{workdir}/embeddings.pth")
         bert_config, args = load_obj(f"{workdir}/bert_config.pth")
+        print("Loaded embeddings and config OK", flush=True)
         bert_config.output_attentions = False
         bert_config.output_hidden_states = False
         print("change successful")
@@ -155,11 +157,13 @@ def main(step, workdir):
         GraphBertNodeClassification = MethodGraphBertNodeClassification(bert_config)
         checkPoint_path = f"{workdir}/check_point"
         os.makedirs("/tmp/check_point", exist_ok=True)
+        print("Model initialized OK", flush=True)
+
 
         train_loader, test_loader, val_loader, accuracy, optimizer, scheduler, early_stopping = step_4(
             GraphBertNodeClassification, raw_embeddings, wl_embedding, hop_embeddings, int_embeddings, data, checkPoint_path, args
         )
-        
+        print("Step 4 setup OK", flush=True)
         
         max_epoch = 100
         classify_learning_record_dict = {}
