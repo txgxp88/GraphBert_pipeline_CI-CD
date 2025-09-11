@@ -1,5 +1,6 @@
 # The GCP pipeline in the example of Basic version of Graph-Bert Model
 
+<img width="2953" height="1702" alt="image" src="https://github.com/user-attachments/assets/9f2955db-5ab8-4edc-912f-9e6a2ad92145" />
 
 
 ----------------------------------------------------------
